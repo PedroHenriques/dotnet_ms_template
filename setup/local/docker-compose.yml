@@ -1,0 +1,116 @@
+services:
+  api:
+    image: ${PROJECT_NAME:-myapp}_api:${IMAGE_TAG:-latest}
+    build:
+      context: ../../
+      dockerfile: ./src/Api/Dockerfile
+    container_name: "api"
+    restart: on-failure
+    depends_on:
+      api_mongodb:
+        condition: service_healthy
+    environment:
+      - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT:-Development}
+      - ASPNETCORE_HTTP_PORTS=10000
+      - MONGODB_CON_STR=mongodb://${API_MONGODB_ADMIN_USER:-admin}:${API_MONGODB_ADMIN_PW:-pw}@api_mongodb:27017/admin?authMechanism=SCRAM-SHA-256&replicaSet=rs0
+    ports:
+      - ${API_PORT:-10000}:10000
+    networks:
+      - api
+
+  api_mongodb:
+    image: mongo:8-noble
+    entrypoint:
+      - bash
+      - -c
+      - |
+        openssl rand -base64 756 > /replica.key
+        chmod 400 /replica.key
+        chown 999:999 /replica.key
+        exec docker-entrypoint.sh $$@
+    command: [ "mongod", "--replSet", "rs0", "--bind_ip_all", "--port", "27017", "-keyFile", "/replica.key" ]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    container_name: "api_mongodb"
+    restart: on-failure
+    environment:
+      - MONGODB_INITDB_ROOT_USERNAME=${API_MONGODB_ADMIN_USER:-admin}
+      - MONGODB_INITDB_ROOT_PASSWORD=${API_MONGODB_ADMIN_PW:-pw}
+      - MONGODB_INITDB_DATABASE=MyApp
+    networks:
+      - api
+      - apiMongoDb
+
+  # Used to start the replica set in the MongoDb instance (will run once and exit)
+  db_init:
+    image: mongo:8-noble
+    container_name: "db_init"
+    restart: "no"
+    depends_on:
+      api_mongodb:
+        condition: service_healthy
+    command: >
+      mongosh --username ${API_MONGODB_ADMIN_USER:-admin} --password ${API_MONGODB_ADMIN_PW:-pw} --host api_mongodb:27017 --eval ' rs.initiate( {
+         _id : "rs0",
+         members: [
+            { _id: 0, host: "api_mongodb:27017" }
+         ]
+      }) '
+    networks:
+      - apiMongoDb
+
+  api_mongodb_gui:
+    image: mongo-express:latest
+    container_name: "api_mongodb_gui"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=api_mongodb
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+      - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
+      - ME_CONFIG_MONGODB_AUTH_USERNAME=${API_MONGODB_ADMIN_USER:-admin}
+      - ME_CONFIG_MONGODB_AUTH_PASSWORD=${API_MONGODB_ADMIN_PW:-pw}
+      - ME_CONFIG_BASICAUTH_USERNAME=appUser
+      - ME_CONFIG_BASICAUTH_PASSWORD=appPw
+      - ME_CONFIG_MONGODB_URL=mongodb://${API_MONGODB_ADMIN_USER:-admin}:${API_MONGODB_ADMIN_PW:-pw}@api_mongodb:27017/?replicaSet=rs0
+    depends_on:
+      api_mongodb:
+        condition: service_healthy
+    ports:
+      - ${MONGODB_GUI_PORT:-9000}:8081
+    networks:
+      - apiMongoDb
+
+  api_redis:
+    image: redis:7-alpine
+    container_name: "api_redis"
+    restart: on-failure
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+    networks:
+      - apiRedis
+
+  redis_gui:
+    image: redislabs/redisinsight:latest
+    container_name: "redis_gui"
+    restart: on-failure
+    depends_on:
+      api_redis:
+        condition: service_healthy
+    ports:
+      - ${REDIS_GUI_PORT:-9001}:5540
+    networks:
+      - apiRedis
+
+networks:
+  api:
+  apiMongoDb:
+  apiRedis:
