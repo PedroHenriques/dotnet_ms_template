@@ -11,6 +11,7 @@ This repository contains:
   - Kafka
   - GUI for MongoDb
   - GUI for Redis
+  - GUI for Kafka
 - Scripts to:
   - Interact with the local environment
   - Run automated tests
@@ -35,6 +36,7 @@ When you first create your repository do the following one time setup:
 - Rename the `my_app.sln` .Net solution file
 - If needed, copy the file `setup/local/.env.template` to `setup/local/.env` and fill in your values
 - Create the environment variables and secrets, in your repository, required by the [CI and CD pipeline templates](https://github.com/CorreiosPortugal/pt.technology.pipeline-templates.actions/blob/main/docs/docker.md)
+- Replace the `Api` service and it's unit test suite
 
 ### Local environment
 #### Start the local environment
@@ -51,6 +53,12 @@ To stop the local environment run the command, from the root of the repository
 ```sh
 sh cli/stop.sh
 ```
+
+#### What is available
+- **MongoDb GUI:** [http://localhost:9000](http://localhost:9000)
+- **Redis GUI:** [http://localhost:9001](http://localhost:9001)
+- **Kafka GUI:** [http://localhost:9002](http://localhost:9002)
+- **Api test GET endpoint:** [http://localhost:10000](http://localhost:10000)
 
 ### Automated tests
 To run the automated tests use the following command, from the root of the repository

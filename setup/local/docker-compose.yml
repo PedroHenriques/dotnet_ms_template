@@ -1,6 +1,5 @@
 services:
   api:
-    image: ${PROJECT_NAME:-myapp}_api:${IMAGE_TAG:-latest}
     build:
       context: ../../
       dockerfile: ./src/Api/Dockerfile
@@ -9,14 +8,45 @@ services:
     depends_on:
       api_db:
         condition: service_healthy
+      api_redis:
+        condition: service_healthy
     environment:
-      - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT:-Development}
+      - DOTNET_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=10000
-      - MONGODB_CON_STR=mongodb://${API_MONGODB_ADMIN_USER:-admin}:${API_MONGODB_ADMIN_PW:-pw}@api_db:27017/admin?authMechanism=SCRAM-SHA-256&replicaSet=rs0
+      - MONGO_CON_STR=mongodb://${API_DB_ADMIN_USER:-admin}:${API_DB_ADMIN_PW:-pw}@api_db:27017/admin?authMechanism=SCRAM-SHA-256&replicaSet=rs0
+      - REDIS_CON_STR=api_redis:6379
+      - KAFKA_CON_STR=broker:29092
     ports:
       - ${API_PORT:-10000}:10000
     networks:
       - api
+      - apiDb
+      - apiRedis
+      - kafka
+
+  api_redis:
+    image: redis:7-alpine
+    container_name: "api_redis"
+    restart: on-failure
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+    networks:
+      - apiRedis
+
+  redis_gui:
+    image: redislabs/redisinsight:latest
+    container_name: "redis_gui"
+    restart: on-failure
+    depends_on:
+      api_redis:
+        condition: service_healthy
+    ports:
+      - ${REDIS_GUI_PORT:-9001}:5540
+    networks:
+      - apiRedis
 
   api_db:
     image: mongo:8-noble
@@ -40,12 +70,11 @@ services:
     container_name: "api_db"
     restart: on-failure
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${API_MONGODB_ADMIN_USER:-admin}
-      - MONGO_INITDB_ROOT_PASSWORD=${API_MONGODB_ADMIN_PW:-pw}
-      - MONGO_INITDB_DATABASE=MyApp
+      - MONGO_INITDB_ROOT_USERNAME=${API_DB_ADMIN_USER:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${API_DB_ADMIN_PW:-pw}
+      - MONGO_INITDB_DATABASE=RefData
     networks:
-      - api
-      - apiMongoDb
+      - apiDb
 
   # Used to start the replica set in the MongoDb instance (will run once and exit)
   db_init:
@@ -56,14 +85,14 @@ services:
       api_db:
         condition: service_healthy
     command: >
-      mongosh --username ${API_MONGODB_ADMIN_USER:-admin} --password ${API_MONGODB_ADMIN_PW:-pw} --host api_db:27017 --eval ' rs.initiate( {
+      mongosh --username ${API_DB_ADMIN_USER:-admin} --password ${API_DB_ADMIN_PW:-pw} --host api_db:27017 --eval ' rs.initiate( {
          _id : "rs0",
          members: [
             { _id: 0, host: "api_db:27017" }
          ]
       }) '
     networks:
-      - apiMongoDb
+      - apiDb
 
   api_db_gui:
     image: mongo-express:latest
@@ -73,47 +102,21 @@ services:
       - ME_CONFIG_MONGODB_PORT=27017
       - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
       - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
-      - ME_CONFIG_MONGODB_AUTH_USERNAME=${API_MONGODB_ADMIN_USER:-admin}
-      - ME_CONFIG_MONGODB_AUTH_PASSWORD=${API_MONGODB_ADMIN_PW:-pw}
+      - ME_CONFIG_MONGODB_AUTH_USERNAME=${API_DB_ADMIN_USER:-admin}
+      - ME_CONFIG_MONGODB_AUTH_PASSWORD=${API_DB_ADMIN_PW:-pw}
       - ME_CONFIG_BASICAUTH_USERNAME=appUser
       - ME_CONFIG_BASICAUTH_PASSWORD=appPw
-      - ME_CONFIG_MONGODB_URL=mongodb://${API_MONGODB_ADMIN_USER:-admin}:${API_MONGODB_ADMIN_PW:-pw}@api_db:27017/?replicaSet=rs0
+      - ME_CONFIG_MONGODB_URL=mongodb://${API_DB_ADMIN_USER:-admin}:${API_DB_ADMIN_PW:-pw}@api_db:27017/?replicaSet=rs0
     depends_on:
       api_db:
         condition: service_healthy
     ports:
-      - ${MONGODB_GUI_PORT:-9000}:8081
+      - ${MONGO_GUI_PORT:-9000}:8081
     networks:
-      - apiMongoDb
-
-  api_redis:
-    image: redis:7-alpine
-    container_name: "api_redis"
-    restart: on-failure
-    healthcheck:
-      test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
-      interval: 1s
-      timeout: 3s
-      retries: 5
-    networks:
-      - api
-      - apiRedis
-
-  redis_gui:
-    image: redislabs/redisinsight:latest
-    container_name: "redis_gui"
-    restart: on-failure
-    depends_on:
-      api_redis:
-        condition: service_healthy
-    ports:
-      - ${REDIS_GUI_PORT:-9001}:5540
-    networks:
-      - apiRedis
-
+      - apiDb
+  
   broker:
     image: confluentinc/cp-kafka:latest
-    hostname: broker
     container_name: broker
     ports:
       - "9092:9092"
@@ -136,11 +139,41 @@ services:
       KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
     networks:
-      - api
+      - kafka
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    container_name: schema-registry
+    depends_on:
+      - broker
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    networks:
+      - kafka
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - 9002:8080
+    depends_on:
+      - broker
+      - schema-registry
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:29092
+      KAFKA_CLUSTERS_0_METRICS_PORT: 9997
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
+      DYNAMIC_CONFIG_ENABLED: 'true'
+    networks:
       - kafka
 
 networks:
   api:
-  apiMongoDb:
+  apiDb:
   apiRedis:
   kafka:
