@@ -7,18 +7,18 @@ services:
     container_name: "api"
     restart: on-failure
     depends_on:
-      api_mongodb:
+      api_db:
         condition: service_healthy
     environment:
       - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT:-Development}
       - ASPNETCORE_HTTP_PORTS=10000
-      - MONGODB_CON_STR=mongodb://${API_MONGODB_ADMIN_USER:-admin}:${API_MONGODB_ADMIN_PW:-pw}@api_mongodb:27017/admin?authMechanism=SCRAM-SHA-256&replicaSet=rs0
+      - MONGODB_CON_STR=mongodb://${API_MONGODB_ADMIN_USER:-admin}:${API_MONGODB_ADMIN_PW:-pw}@api_db:27017/admin?authMechanism=SCRAM-SHA-256&replicaSet=rs0
     ports:
       - ${API_PORT:-10000}:10000
     networks:
       - api
 
-  api_mongodb:
+  api_db:
     image: mongo:8-noble
     entrypoint:
       - bash
@@ -37,12 +37,12 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
-    container_name: "api_mongodb"
+    container_name: "api_db"
     restart: on-failure
     environment:
-      - MONGODB_INITDB_ROOT_USERNAME=${API_MONGODB_ADMIN_USER:-admin}
-      - MONGODB_INITDB_ROOT_PASSWORD=${API_MONGODB_ADMIN_PW:-pw}
-      - MONGODB_INITDB_DATABASE=MyApp
+      - MONGO_INITDB_ROOT_USERNAME=${API_MONGODB_ADMIN_USER:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${API_MONGODB_ADMIN_PW:-pw}
+      - MONGO_INITDB_DATABASE=MyApp
     networks:
       - api
       - apiMongoDb
@@ -53,23 +53,23 @@ services:
     container_name: "db_init"
     restart: "no"
     depends_on:
-      api_mongodb:
+      api_db:
         condition: service_healthy
     command: >
-      mongosh --username ${API_MONGODB_ADMIN_USER:-admin} --password ${API_MONGODB_ADMIN_PW:-pw} --host api_mongodb:27017 --eval ' rs.initiate( {
+      mongosh --username ${API_MONGODB_ADMIN_USER:-admin} --password ${API_MONGODB_ADMIN_PW:-pw} --host api_db:27017 --eval ' rs.initiate( {
          _id : "rs0",
          members: [
-            { _id: 0, host: "api_mongodb:27017" }
+            { _id: 0, host: "api_db:27017" }
          ]
       }) '
     networks:
       - apiMongoDb
 
-  api_mongodb_gui:
+  api_db_gui:
     image: mongo-express:latest
-    container_name: "api_mongodb_gui"
+    container_name: "api_db_gui"
     environment:
-      - ME_CONFIG_MONGODB_SERVER=api_mongodb
+      - ME_CONFIG_MONGODB_SERVER=api_db
       - ME_CONFIG_MONGODB_PORT=27017
       - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
       - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
@@ -77,9 +77,9 @@ services:
       - ME_CONFIG_MONGODB_AUTH_PASSWORD=${API_MONGODB_ADMIN_PW:-pw}
       - ME_CONFIG_BASICAUTH_USERNAME=appUser
       - ME_CONFIG_BASICAUTH_PASSWORD=appPw
-      - ME_CONFIG_MONGODB_URL=mongodb://${API_MONGODB_ADMIN_USER:-admin}:${API_MONGODB_ADMIN_PW:-pw}@api_mongodb:27017/?replicaSet=rs0
+      - ME_CONFIG_MONGODB_URL=mongodb://${API_MONGODB_ADMIN_USER:-admin}:${API_MONGODB_ADMIN_PW:-pw}@api_db:27017/?replicaSet=rs0
     depends_on:
-      api_mongodb:
+      api_db:
         condition: service_healthy
     ports:
       - ${MONGODB_GUI_PORT:-9000}:8081
@@ -96,6 +96,7 @@ services:
       timeout: 3s
       retries: 5
     networks:
+      - api
       - apiRedis
 
   redis_gui:
@@ -110,7 +111,36 @@ services:
     networks:
       - apiRedis
 
+  broker:
+    image: confluentinc/cp-kafka:latest
+    hostname: broker
+    container_name: broker
+    ports:
+      - "9092:9092"
+      - "9101:9101"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@broker:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    networks:
+      - api
+      - kafka
+
 networks:
   api:
   apiMongoDb:
   apiRedis:
+  kafka:

@@ -16,7 +16,7 @@ public class ProgramTests : IDisposable
   }
 
   [Fact]
-  public async void SomePublicMethod_ItShouldBeGreen()
+  public void SomePublicMethod_ItShouldBeGreen()
   {
     Assert.Equal(1, 1);
   }

@@ -11,7 +11,7 @@ if (app.Environment.IsDevelopment())
   app.UseSwaggerUI();
 }
 
-this._app.MapGet(
+app.MapGet(
   "/",
   () =>
   {

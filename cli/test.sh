@@ -8,8 +8,6 @@ USE_DOCKER=0;
 RUNNING_IN_PIPELINE=0;
 RUN_LOCAL_ENV=0;
 
-exit 0;
-
 while [ "$#" -gt 0 ]; do
   case "$1" in
     -w|--watch) WATCH=1; shift 1;;
