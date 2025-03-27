@@ -1,7 +1,12 @@
 using System.Dynamic;
-using MongoDB.Driver;
 using StackExchange.Redis;
 using Confluent.Kafka;
+using Toolkit;
+using Toolkit.Types;
+using MongodbUtils = Toolkit.Utils.Mongodb;
+using RedisUtils = Toolkit.Utils.Redis;
+using KafkaUtils = Toolkit.Utils.Kafka<string, dynamic>;
+using Confluent.SchemaRegistry;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -29,12 +34,9 @@ app.MapGet(
     {
       throw new Exception("Could not get the 'MONGO_CON_STR' environment variable");
     }
-    MongoClient? mongoClient = new MongoClient(mongoConStr);
-    if (mongoClient == null)
-    {
-      throw new Exception("Mongo Client returned NULL.");
-    }
-    await mongoClient.GetDatabase("myTestDb").GetCollection<dynamic>("myTestCol").InsertOneAsync(document);
+    MongoDbInputs mongodbInputs = MongodbUtils.PrepareInputs(mongoConStr);
+    IMongodb mongoDb = new Mongodb(mongodbInputs);
+    await mongoDb.InsertOne<dynamic>("myTestDb", "myTestCol", document);
 
 
     string? redisConStr = Environment.GetEnvironmentVariable("REDIS_CON_STR");
@@ -46,33 +48,37 @@ app.MapGet(
     {
       EndPoints = { redisConStr },
     };
-    IConnectionMultiplexer? redisClient = ConnectionMultiplexer.Connect(redisConOpts);
-    if (redisClient == null)
-    {
-      throw new Exception("Redis Client returned NULL.");
-    }
-    var redisDb = redisClient.GetDatabase(0);
-    await redisDb.StringSetAsync("prop1", document.prop1);
-    await redisDb.StringSetAsync("prop2", document.prop2);
+    RedisInputs redisInputs = RedisUtils.PrepareInputs(redisConOpts);
+    ICache redis = new Redis(redisInputs);
+    await redis.Set("prop1", document.prop1);
+    await redis.Set("prop2", document.prop2);
 
+
+    string? schemaRegistryUrl = Environment.GetEnvironmentVariable("KAFKA_SCHEMA_REGISTRY_URL");
+    if (schemaRegistryUrl == null)
+    {
+      throw new Exception("Could not get the 'KAFKA_SCHEMA_REGISTRY_URL' environment variable");
+    }
+    SchemaRegistryConfig schemaRegistryConfig = new SchemaRegistryConfig { Url = schemaRegistryUrl };
 
     string? kafkaConStr = Environment.GetEnvironmentVariable("KAFKA_CON_STR");
     if (kafkaConStr == null)
     {
       throw new Exception("Could not get the 'KAFKA_CON_STR' environment variable");
     }
-    var config = new ProducerConfig
+    var producerConfig = new ProducerConfig
     {
       BootstrapServers = kafkaConStr,
     };
-    var producer = new ProducerBuilder<string, string>(config).Build();
-    await producer.ProduceAsync(
-      "myTestTopic",
-      new Message<string, string> { Key = "prop1", Value = document.prop1 }
+
+    KafkaInputs<string, dynamic> kafkaInputs = KafkaUtils.PrepareInputs(
+      schemaRegistryConfig, "myTestTopic-value", 1, producerConfig
     );
-    await producer.ProduceAsync(
+    IKafka<string, dynamic> kafka = new Kafka<string, dynamic>(kafkaInputs);
+    kafka.Publish(
       "myTestTopic",
-      new Message<string, string> { Key = "prop2", Value = document.prop2 }
+      new Message<string, dynamic> { Key = "prop1", Value = document },
+      (res) => { Console.WriteLine($"Event inserted in partition: {res.Partition} and offset: {res.Offset}."); }
     );
 
 
