@@ -22,7 +22,7 @@ jobs:
           source_gh_token: ${{ secrets.TEMPLATE_REPO_TOKEN }}
           upstream_branch: main
           pr_labels: template_repo_sync
-          pr_reviewers: @PedroHenriques
+          pr_reviewers: "@PedroHenriques"
           git_user_name: github-actions[bot]
           git_user_email: github-actions[bot]@users.noreply.github.com
           template_sync_ignore_file_path: setup/workflows/.templatesyncignore
@@ -38,7 +38,7 @@ jobs:
           chmod +x ./cli/dependencies_update.sh;
           ./cli/dependencies_update.sh --cicd -u -y;
 
-      - name: Open PR with bumpes versions
+      - name: Open PR with bumped versions
         env:
           GITHUB_TOKEN: ${{ secrets.OWN_REPO_TOKEN }}
         run: >-
