@@ -11,9 +11,14 @@ defaults:
 jobs:
   template-repo-sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.OWN_REPO_TOKEN }}
 
       - name: actions-template-sync
         uses: AndreasAugustin/actions-template-sync@v2
@@ -22,7 +27,7 @@ jobs:
           source_gh_token: ${{ secrets.TEMPLATE_REPO_TOKEN }}
           upstream_branch: main
           pr_labels: template_repo_sync
-          pr_reviewers: "@PedroHenriques"
+          pr_reviewers: PedroHenriques
           git_user_name: github-actions[bot]
           git_user_email: github-actions[bot]@users.noreply.github.com
           template_sync_ignore_file_path: setup/workflows/.templatesyncignore
@@ -34,7 +39,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Update dependencies
-        run: <-
+        run: >-
           chmod +x ./cli/dependencies_update.sh;
           ./cli/dependencies_update.sh --cicd -u -y;
 
@@ -47,6 +52,11 @@ jobs:
 
           printf -v CUR_DATE '%(%Y-%m-%d)T\n' -1;
           BRANCH_NAME="dependencies-version-bump-${CUR_DATE}";
+
+          if [ $(git status -s -uno | wc -l) -eq 0 ]; then
+            echo "No changed files.";
+            exit 0;
+          fi
 
           git checkout -b $BRANCH_NAME;
           git commit -am "Dependencies version bump ${CUR_DATE}";
