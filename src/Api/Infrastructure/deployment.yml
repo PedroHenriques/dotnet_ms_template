@@ -36,6 +36,8 @@ spec:
           envFrom:
             - configMapRef:
               name: ${SERVICE}-config
+            - secretRef:
+              name: ${SERVICE}-secret
           resources:
             requests:
               memory: ${API_MS_REQ_RAM}
