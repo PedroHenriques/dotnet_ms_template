@@ -35,9 +35,9 @@ spec:
             runAsNonRoot: true
           envFrom:
             - configMapRef:
-              name: ${SERVICE}-config
+                name: ${SERVICE}-config
             - secretRef:
-              name: ${SERVICE}-secret
+                name: ${SERVICE}-secret
           resources:
             requests:
               memory: ${API_MS_REQ_RAM}
