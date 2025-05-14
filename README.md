@@ -151,7 +151,7 @@ Where:
 If the update flag is not provided, the script will print the report with all the dependencies that are outdated, but will not update any of them.
 
 ## CI/CD lifecycle
-This project uses the reusable pipeline templates for Docker build artifacts located at `https://github.com/PedroHenriques/ci_cd_workflow_templates` and follows the work flow below.
+This project uses the reusable pipeline templates for Docker build artifacts located at `https://github.com/CorreiosPortugal/pt.technology.pipeline-templates.actions` and follows the work flow below.
 ![alt text](documentation/ci_cd_tbd_workflow.drawio.png)
 
 The CI/CD pipeline has the following triggers:
