@@ -25,6 +25,7 @@ services:
       - apiDb
       - apiRedis
       - kafka
+      - myapp_shared
 
   api_redis:
     image: redis:7-alpine
@@ -179,3 +180,5 @@ networks:
   apiDb:
   apiRedis:
   kafka:
+  myapp_shared:
+    external: true
