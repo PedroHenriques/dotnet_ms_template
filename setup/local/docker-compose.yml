@@ -162,7 +162,7 @@ services:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
     ports:
-      - 9002:8080
+      - ${KAFKA_GUI_PORT:-9002}:8080
     depends_on:
       - broker
       - schema-registry
