@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ${SERVICE}-deployment
+  name: ${SERVICE}-deployment-${BUILD_TIMESTAMP}
   namespace: ${NAMESPACE}
   labels:
     app: ${SERVICE}
@@ -23,7 +23,7 @@ spec:
         env: ${ENVIRONMENT}
         version: ${IMG_TAG}
     spec:
-      serviceAccountName: ${SERVICE}-service-account
+      serviceAccountName: ${SERVICE}-service-account-${BUILD_TIMESTAMP}
       containers:
         - name: ${SERVICE}
           image: ${IMG_NAME}:${IMG_TAG}
@@ -35,9 +35,9 @@ spec:
             runAsNonRoot: true
           envFrom:
             - configMapRef:
-                name: ${SERVICE}-config
+                name: ${SERVICE}-config-${BUILD_TIMESTAMP}
             - secretRef:
-                name: ${SERVICE}-secret
+                name: ${SERVICE}-secret-${BUILD_TIMESTAMP}
           resources:
             requests:
               memory: ${API_MS_REQ_RAM}

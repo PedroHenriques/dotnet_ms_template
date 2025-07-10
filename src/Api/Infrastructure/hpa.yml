@@ -1,7 +1,7 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: ${SERVICE}-hpa
+  name: ${SERVICE}-hpa-${BUILD_TIMESTAMP}
   namespace: ${NAMESPACE}
   labels:
     app: ${SERVICE}
@@ -11,7 +11,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: ${SERVICE}-deployment
+    name: ${SERVICE}-deployment-${BUILD_TIMESTAMP}
     namespace: ${NAMESPACE}
   minReplicas: ${API_MS_MIN_REPLICAS}
   maxReplicas: ${API_MS_MAX_REPLICAS}
