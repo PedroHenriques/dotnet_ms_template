@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: ${SERVICE}-config
+  name: ${SERVICE}-config-${BUILD_TIMESTAMP}
   namespace: ${NAMESPACE}
   labels:
     app: ${SERVICE}
