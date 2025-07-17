@@ -48,7 +48,7 @@ app.MapGet(
     {
       EndPoints = { redisConStr },
     };
-    RedisInputs redisInputs = RedisUtils.PrepareInputs(redisConOpts);
+    RedisInputs redisInputs = RedisUtils.PrepareInputs(redisConOpts, "test consumer group");
     ICache redis = new Redis(redisInputs);
     await redis.Set("prop1", document.prop1);
     await redis.Set("prop2", document.prop2);
@@ -78,7 +78,7 @@ app.MapGet(
     kafka.Publish(
       "myTestTopic",
       new Message<string, dynamic> { Key = "prop1", Value = document },
-      (res) => { Console.WriteLine($"Event inserted in partition: {res.Partition} and offset: {res.Offset}."); }
+      (res, ex) => { Console.WriteLine($"Event inserted in partition: {res.Partition} and offset: {res.Offset}."); }
     );
 
 
