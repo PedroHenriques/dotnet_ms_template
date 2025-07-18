@@ -17,8 +17,8 @@ while [ "$#" -gt 0 ]; do
     --cicd) RUNNING_IN_PIPELINE=1; USE_DOCKER=1; shift 1;;
     --filter) FILTERS="--filter ${2}"; shift 2;;
     --unit) FILTERS="--filter Type=Unit"; TEST_TYPE="unit"; shift 1;;
-    --integration) FILTERS="--filter Type=Integration"; TEST_TYPE="integration"; RUN_LOCAL_ENV=1; shift 1;;
-    --e2e) FILTERS="--filter Type=E2E"; TEST_TYPE="e2e"; RUN_LOCAL_ENV=1; shift 1;;
+    --integration) FILTERS="--filter Type=Integration"; TEST_TYPE="integration"; RUN_LOCAL_ENV=1; USE_DOCKER=1; shift 1;;
+    --e2e) FILTERS="--filter Type=E2E"; TEST_TYPE="e2e"; RUN_LOCAL_ENV=1; USE_DOCKER=1; shift 1;;
     --coverage) COVERAGE="--collect:\"XPlat Code Coverage\""; FILTERS="--filter Type=Unit"; TEST_TYPE="unit"; shift 1;;
 
     -*) echo "unknown option: $1" >&2; exit 1;;
