@@ -152,6 +152,7 @@ Whitespace separated list of test `.csproj` to run.
 
 **NOTES:**<br>
 - When running the tests with the flags `--docker` or `--cicd`, the tests will run inside a Docker container that will be in the `myapp_shared` network.
+- When running the script with the flags ``--integration` or `--e2e` the flag `--docker` is assumed as well, which means the tests will run inside a Docker container.
 
 ### Generating test coverage reports
 To generate unit test coverage reports, including an HTML report, from the root of the project run the command
