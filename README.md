@@ -83,15 +83,15 @@ This will run a Docker compose project and start several networked Docker contai
 
 The following services will be running in the containers:
 - 1 Elasticsearch instance
-- 1 Logstash instance
 - 1 Kibana instance
+- 1 OTEL Collector instance
 
 **NOTE:** Elasticsearch takes a few minutes to start and be ready to receive information, which means if you send logs before it is ready then those logs will be lost.<br>
 In order to confirm if the ELK stack is ready run the command
 ```sh
 docker ps -a
 ```
-And check if the `elasticsearch` and `logstash` services are `healthy`.
+And check if the `elasticsearch` service is `healthy`.
 
 3. Interact with the local environment via the following URLs:
 
