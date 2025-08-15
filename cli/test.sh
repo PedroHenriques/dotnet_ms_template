@@ -100,7 +100,9 @@ if [ $USE_DOCKER -eq 1 ]; then
 
   docker run --rm ${INTERACTIVE_FLAGS} --network=myapp_shared -v "./:/app/" -w "/app/" mcr.microsoft.com/dotnet/sdk:8.0-noble /bin/sh -c "${CMD}";
 
-  dotnet restore;
+  if [ $RUNNING_IN_PIPELINE -eq 0 ]; then
+    dotnet restore;
+  fi
 else
   eval "${CMD}";
 fi
