@@ -33,7 +33,9 @@ To develop in this application you will need, at a minimum, to have installed in
 - [AVX](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions) support in your system ![alt text](documentation/mongodb_avx.png)
 
 ## Local development environment
-This repository contains a local development environment, fully containerised, that can be used to run the application on your machine and test it.
+This repository contains a local development environment, fully containerised, that can be used to run the application on your machine and test it.<br><br>
+The services available in the local development environment are configured at `setup/local/docker-compose.yml` and `setup/local/docker-compose.elk.yml`.<br>
+**NOTE:** Any service assigned with the profile `only_if_not_cicd` will not be started in a **CICD** environment.<br><br>
 
 **NOTE:** Use of a unix command line environment is recommended.
 
