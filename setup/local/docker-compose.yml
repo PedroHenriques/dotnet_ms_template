@@ -43,6 +43,7 @@ services:
   redis_gui:
     image: redislabs/redisinsight:latest
     container_name: "redis_gui"
+    profiles: ["only_if_not_cicd"]
     restart: on-failure
     depends_on:
       api_redis:
@@ -102,6 +103,7 @@ services:
   api_db_gui:
     image: mongo-express:latest
     container_name: "api_db_gui"
+    profiles: ["only_if_not_cicd"]
     environment:
       - ME_CONFIG_MONGODB_SERVER=api_db
       - ME_CONFIG_MONGODB_PORT=27017
@@ -178,6 +180,7 @@ services:
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
+    profiles: ["only_if_not_cicd"]
     ports:
       - ${KAFKA_GUI_PORT:-9002}:8080
     depends_on:
