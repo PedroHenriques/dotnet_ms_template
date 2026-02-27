@@ -109,12 +109,12 @@ Accept the T&C and submit to enter.
 ![alt text](documentation/redis_tec.png)
 
 Add the following databases:<br>
-`redis://default@api_redis:6379`<br>
+`redis://default:password@api_redis:6379`<br>
 
 `Kafka GUI`: [http://localhost:9002](http://localhost:9002)<br>
 **NOTES:**<br>
-Add a topic with the name `myTestTopic` with, at least, 1 partition.<br>
-Add a schema with the subject `myTestTopic-value`, the content of the file `setup/local/kafka_schema_json.json` and the type `JSON`.
+Add a topic with the name `myTestTopic` with, at least, 1 partition.
+Register the `myTestTopic-key` and `myTestTopic-value` schemas, using the contents of the files `setup/local/myTestTopic_schema_key.json` and `setup/local/myTestTopic_schema_value.json`, respectively and the type `JSON`.
 
 `Kibana`: [http://localhost:9003](http://localhost:9003)
 
