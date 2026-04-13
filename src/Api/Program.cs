@@ -3,6 +3,7 @@ using Confluent.Kafka;
 using Toolkit;
 using Toolkit.Types;
 using MongodbUtils = Toolkit.Utils.Mongodb;
+using LoggerUtils = Toolkit.Utils.Logger;
 using RedisUtils = Toolkit.Utils.Redis;
 using KafkaUtils = Toolkit.Utils.Kafka<MyKey, MyValue>;
 using Confluent.SchemaRegistry;
@@ -10,6 +11,8 @@ using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+LoggerUtils.PrepareInputs(builder);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
