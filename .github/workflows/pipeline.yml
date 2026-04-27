@@ -14,6 +14,7 @@ jobs:
       custom_service_file_pattern: '*.csproj'
       build_file_pattern: 'Dockerfile'
       deploy_all_services_label_name: 'deploy all services'
+      skip_heavy_tests: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}
     secrets: inherit
   
   # cd-dev:
