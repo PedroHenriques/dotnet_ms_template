@@ -31,7 +31,7 @@ services:
       - myapp_shared
 
   api_redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     container_name: "api_redis"
     restart: on-failure
     command:
